@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "726845108727",
+    "project_id": "smart-inhaler-db",
+    "storage_bucket": "smart-inhaler-db.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726845108727:android:dfcc48cc6591e9d94cbef2",
+        "android_client_info": {
+          "package_name": "com.example.smart_inhaler"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBkGif0FrbyuDpJ-wA92EI5ITS7aBJYfTQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

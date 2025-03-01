@@ -1,0 +1,2 @@
+C:/Users/vaish/smart_inhaler/android/app/.cxx/RelWithDebInfo/3b6m533o/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/vaish/smart_inhaler/android/app/.cxx/RelWithDebInfo/3b6m533o/x86_64/CMakeFiles/rebuild_cache.dir

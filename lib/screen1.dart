@@ -1,152 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:smart_inhaler/graphscreen.dart';
 import 'dart:async';
-import 'test.dart'; // Import screen 2
-import 'graphscreen.dart'; // Import graph screen
+import 'dose_counter.dart';
+import 'graphscreen.dart';
+import 'test.dart'; // Import screen 2 (assuming this is the correct name)
 import 'buzzer_control.dart'; // Import BuzzerControl
 
-// --- Constants (Moved here as they are specific to this screen's UI) ---
+// --- Constants (Used by widgets remaining in this file) ---
 const Color _motionSensorCardColor = Color(0xFFB2EBF2); // Light Teal
-const Color _buzzerButtonColor = Color(0xFFFFAB91); // Warm Coral
-const Color _textColor = Color(0xFF212121);
-const double _cardCornerRadius = 12.0;
-const double _cardElevation = 4.0;
-
-// --- Dose Counter Widget ---
-class DoseCounter extends StatefulWidget {
-  final int doseCount;
-  final int maxDoseCount;
-  final VoidCallback onEdit;
-
-  const DoseCounter({
-    Key? key,
-    required this.doseCount,
-    required this.maxDoseCount,
-    required this.onEdit,
-  }) : super(key: key);
-
-  @override
-  _DoseCounterState createState() => _DoseCounterState();
-}
-
-class _DoseCounterState extends State<DoseCounter>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _animation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant DoseCounter oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.doseCount < oldWidget.doseCount) {
-      _animationController.reset();
-      _animationController.forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  Color _getProgressColor(double progress) {
-    if (progress > 0.6) {
-      return Colors.cyan; // Plenty of doses left
-    } else if (progress > 0.3) {
-      return Colors.orange; // Getting low
-    } else {
-      return Colors.red; // Very low, needs replacement
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    double progress = widget.doseCount / widget.maxDoseCount;
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const Text(
-            'Doses Remaining', // Added title here
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-              color: _textColor,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: widget.onEdit,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Outer progress circle
-                SizedBox(
-                  width: 230,
-                  height: 230,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 25,
-                    backgroundColor: Colors.grey.withOpacity(0.2),
-                    valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(progress)), // Use valueColor
-                  ),
-                ),
-                // Inner circle with radial gradient and white numbers
-                ScaleTransition(
-                  scale: _animation,
-                  child: Container(
-                    width: 205,
-                    height: 205,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.blue,
-                          Color(0xFF00008B), // Dark Blue
-                        ],
-                        center: Alignment.center,
-                        radius: 0.7,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${widget.doseCount}',
-                        style: const TextStyle(
-                          fontSize: 60,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white, // White text color
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8), // Add some space below the counter
-           Text(
-            'Tap to edit', // Hint for editing
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-        ],
-      ),
-    );
-  }
-}
+const Color _buzzerButtonColor = Color(0xFFFFAB91); // Warm Coral (If used by BuzzerControl internally)
+const Color _textColor = Color(0xFF212121); // Used by MotionSensorNumericalData & AppBar
+const double _cardCornerRadius = 12.0; // Used by MotionSensorNumericalData
+const double _cardElevation = 4.0; // Used by MotionSensorNumericalData
 
 // --- Motion Sensor Data Widget (Numerical Values Only) ---
 class MotionSensorNumericalData extends StatelessWidget {
@@ -183,7 +48,7 @@ class MotionSensorNumericalData extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Motion Sensor Data (Numerical)',
+              'Motion Sensor Data', // Simplified title
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w500,
@@ -191,14 +56,15 @@ class MotionSensorNumericalData extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _buildDataRow('Acceleration X:', accelX.toStringAsFixed(3)),
-            _buildDataRow('Acceleration Y:', accelY.toStringAsFixed(3)),
-            _buildDataRow('Acceleration Z:', accelZ.toStringAsFixed(3)),
-            _buildDataRow('Gyroscope X:', gyroX.toStringAsFixed(3)),
-            _buildDataRow('Gyroscope Y:', gyroY.toStringAsFixed(3)),
-            _buildDataRow('Gyroscope Z:', gyroZ.toStringAsFixed(3)),
-            const SizedBox(height: 12),
-            _buildDataRow('Temperature:', '${temp.toStringAsFixed(1)}°C'),
+            _buildDataRow('Accel X:', accelX.toStringAsFixed(3)),
+            _buildDataRow('Accel Y:', accelY.toStringAsFixed(3)),
+            _buildDataRow('Accel Z:', accelZ.toStringAsFixed(3)),
+             const Divider(height: 16, thickness: 1), // Separator
+            _buildDataRow('Gyro X:', gyroX.toStringAsFixed(3)),
+            _buildDataRow('Gyro Y:', gyroY.toStringAsFixed(3)),
+            _buildDataRow('Gyro Z:', gyroZ.toStringAsFixed(3)),
+            const Divider(height: 16, thickness: 1), // Separator
+            _buildDataRow('Temperature:', '${temp.toStringAsFixed(1)} °C'), // Added space
           ],
         ),
       ),
@@ -215,7 +81,7 @@ class MotionSensorNumericalData extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w500,
+             // fontWeight: FontWeight.w500, // Normal weight might be better here
               color: _textColor,
             ),
           ),
@@ -261,7 +127,7 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
   double _gyroZ = 0.0;
   double _temp = 0.0;
 
-  // Variables for FSR data
+  // Variables for FSR data (Still needed for dose detection logic)
   int _fsrSensor1 = 0;
   int _fsrSensor2 = 0;
   int _fsrSensor3 = 0;
@@ -294,67 +160,98 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
 
       // Attempt to get initial values once
       try {
-         final snapshot = await _dbRef.get();
+         // Use timeout to prevent hanging indefinitely if DB is unreachable
+         final snapshot = await _dbRef.get().timeout(const Duration(seconds: 10));
          if (snapshot.exists && snapshot.value != null) {
             print('Initial data fetched successfully.');
             _parseData(snapshot.value); // Parse initial data
-             setState(() {
-               _isConnected = true; // Assume connected if initial fetch works
-             });
+             // Set connected state only if parsing is successful and mounted
+            if(mounted) {
+              setState(() {
+                _isConnected = true;
+              });
+            }
          } else {
-            print('Initial data fetch: No data found at root.');
-             // Keep default values if no initial data
+            print('Initial data fetch: No data found at root or snapshot is null.');
+            // Keep default values if no initial data
+            if (mounted) {
+               setState(() {
+                 _isConnected = false; // Explicitly set disconnected if initial fetch fails
+               });
+            }
          }
       } catch(e) {
           print('Error fetching initial data: $e');
           // Keep defaults, show error later if subscription also fails
-      }
-
-
-      // Listen for subsequent value changes
-      _subscription = _dbRef.onValue.listen(
-        (DatabaseEvent event) {
-          // print('Data received: ${event.snapshot.value}'); // Can be noisy, uncomment if needed
-          if (event.snapshot.value != null) {
-            _parseData(event.snapshot.value);
-            if (!_isConnected) {
-               setState(() {
-                 _isConnected = true; // Mark as connected once data flows
-               });
-            }
-          } else {
-            print('No data received from Firebase stream');
-            // Don't necessarily mark as disconnected here, could be temporary
-            // Maybe add a timeout check later if needed
-          }
-        },
-        onError: (error) {
-          print('Database stream error: $error');
-          if (mounted) { // Check if widget is still in the tree
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Firebase connection error: ${error.toString()}')),
-            );
+          if (mounted) {
             setState(() {
               _isConnected = false;
             });
           }
-        },
-        onDone: () {
-          print('Database connection closed');
+      } finally {
+         // Ensure initializing is set to false after initial fetch attempt
+         if (mounted) {
+            setState(() {
+              _isInitializing = false;
+            });
+         }
+      }
+
+
+      // Listen for subsequent value changes only if initialization didn't fail catastrophically
+      if(_dbRef != null) { // Check if dbRef was successfully initialized
+          _subscription?.cancel(); // Cancel any previous subscription
+          _subscription = _dbRef.onValue.listen(
+            (DatabaseEvent event) {
+              // print('Data received: ${event.snapshot.value}'); // Uncomment for debugging
+              if (event.snapshot.value != null) {
+                _parseData(event.snapshot.value);
+                if (!_isConnected && mounted) {
+                   setState(() {
+                     _isConnected = true; // Mark as connected once data flows
+                   });
+                }
+              } else {
+                print('No data received from Firebase stream (snapshot value is null)');
+                // Consider adding a timeout or counter here to set _isConnected=false
+                // if no data is received for a certain period.
+              }
+            },
+            onError: (error) {
+              print('Database stream error: $error');
+              if (mounted) { // Check if widget is still in the tree
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Firebase connection error: ${error.toString()}')),
+                );
+                setState(() {
+                  _isConnected = false;
+                   _isInitializing = false; // Ensure initializing is false on error
+                });
+              }
+            },
+            onDone: () {
+              print('Database connection stream closed');
+               if (mounted) {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('Firebase connection closed')),
+                 );
+                 setState(() {
+                   _isConnected = false;
+                   _isInitializing = false; // Ensure initializing is false when done
+                 });
+               }
+            },
+          );
+      } else {
+          print("Database reference is null, cannot listen for changes.");
            if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
-               const SnackBar(content: Text('Firebase connection closed')),
-             );
              setState(() {
                _isConnected = false;
+               _isInitializing = false;
              });
            }
-        },
-      );
-       // Mark initialization complete after setting up listener
-       setState(() {
-         _isInitializing = false;
-       });
+      }
+
 
     } catch (e) {
       print('Error setting up database reference: $e');
@@ -371,11 +268,15 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
   }
 
   // Centralized data parsing logic
-  void _parseData(dynamic rawData) {
-     if (rawData == null) return;
+ void _parseData(dynamic rawData) {
+     if (rawData == null || rawData is! Map) {
+        print('Invalid or null data received for parsing.');
+        return; // Exit if data is not a Map or is null
+     }
 
      try {
-        final data = Map<String, dynamic>.from(rawData as Map);
+        final data = Map<String, dynamic>.from(rawData);
+        bool stateChanged = false; // Track if any state update is needed
 
         // --- FSR and Dose Counting Logic ---
         if (data.containsKey('FSR') && data['FSR'] is Map) {
@@ -385,116 +286,125 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
           final oldFSR3 = _fsrSensor3;
 
           // Update FSR values safely
-          final newFSR1 = _parseIntValue(fsrData['sensor1']);
-          final newFSR2 = _parseIntValue(fsrData['sensor2']);
-          final newFSR3 = _parseIntValue(fsrData['sensor3']);
+          final newFSR1 = _parseIntValue(fsrData['sensor1'], _fsrSensor1); // Pass current value as default
+          final newFSR2 = _parseIntValue(fsrData['sensor2'], _fsrSensor2);
+          final newFSR3 = _parseIntValue(fsrData['sensor3'], _fsrSensor3);
 
+          // Threshold for detecting press
+          const int pressThreshold = 50; // Define threshold clearly
 
-          // Check for dose decrement condition
-          bool allNonZeroNow = newFSR1 > 50 && newFSR2 > 50 && newFSR3 > 50; // Added threshold
-          bool anyZeroBefore = oldFSR1 <= 50 || oldFSR2 <= 50 || oldFSR3 <= 50; // Use threshold
+          // Check for dose decrement condition: Transition from NOT all pressed to ALL pressed
+          bool allPressedNow = newFSR1 > pressThreshold && newFSR2 > pressThreshold && newFSR3 > pressThreshold;
+          bool notAllPressedBefore = oldFSR1 <= pressThreshold || oldFSR2 <= pressThreshold || oldFSR3 <= pressThreshold;
 
-          if (allNonZeroNow && anyZeroBefore && _doseCount > 0 && !_doseCounted) {
-             print("Dose condition met! Decrementing count.");
-            _doseCounted = true; // Set flag immediately
+          if (allPressedNow && notAllPressedBefore && _doseCount > 0 && !_doseCounted) {
+             print("Dose condition met! FSRs: $newFSR1, $newFSR2, $newFSR3. Decrementing count.");
+             _doseCounted = true; // Set flag immediately
              final newDoseCount = _doseCount - 1;
 
              // Update Firebase first
              _dbRef.update({'doseCount': newDoseCount}).then((_) {
                 print("Firebase doseCount updated to $newDoseCount");
                 // Update local state only after successful Firebase update
-                if (mounted) {
-                  setState(() {
-                    _doseCount = newDoseCount;
-                  });
-                }
+                // No direct setState here, handled later if doseCount changes
              }).catchError((error) {
                 print("Error updating Firebase doseCount: $error");
                  _doseCounted = false; // Reset flag on error
              });
 
-
-            // Reset the flag after a delay to prevent rapid counts
-            _doseCountResetTimer?.cancel(); // Cancel previous timer if any
-            _doseCountResetTimer = Timer(const Duration(seconds: 2), () {
-                print("Resetting dose count flag.");
-              _doseCounted = false;
-            });
-          }
-           // Update state for FSR values *after* checking dose condition
-           if(mounted) {
-             setState(() {
-                 _fsrSensor1 = newFSR1;
-                 _fsrSensor2 = newFSR2;
-                 _fsrSensor3 = newFSR3;
+             // Reset the flag after a delay to prevent rapid counts
+             _doseCountResetTimer?.cancel(); // Cancel previous timer if any
+             _doseCountResetTimer = Timer(const Duration(seconds: 2), () {
+                 print("Resetting dose count flag.");
+                 _doseCounted = false;
              });
-           }
+          }
+
+          // Update local FSR state if values changed
+          if (newFSR1 != _fsrSensor1 || newFSR2 != _fsrSensor2 || newFSR3 != _fsrSensor3) {
+             _fsrSensor1 = newFSR1;
+             _fsrSensor2 = newFSR2;
+             _fsrSensor3 = newFSR3;
+             stateChanged = true; // Mark state changed (though FSR isn't directly displayed)
+          }
         }
 
         // --- Dose Count Update (from Firebase) ---
         if (data.containsKey('doseCount')) {
-           final firebaseDoseCount = _parseIntValue(data['doseCount']);
-           // Only update if different from local to avoid unnecessary rebuilds
-           if (firebaseDoseCount != _doseCount && mounted) {
-              setState(() {
-                _doseCount = firebaseDoseCount;
-              });
+           final firebaseDoseCount = _parseIntValue(data['doseCount'], _doseCount);
+           if (firebaseDoseCount != _doseCount) {
+              _doseCount = firebaseDoseCount;
+              stateChanged = true;
            }
         }
 
-        // --- Max Dose Count Update (from Firebase, optional) ---
+        // --- Max Dose Count Update (from Firebase) ---
          if (data.containsKey('maxDoseCount')) {
-           final firebaseMaxDoseCount = _parseIntValue(data['maxDoseCount']);
-           if (firebaseMaxDoseCount != _maxDoseCount && firebaseMaxDoseCount > 0 && mounted) {
-              setState(() {
-                _maxDoseCount = firebaseMaxDoseCount;
-              });
+           final firebaseMaxDoseCount = _parseIntValue(data['maxDoseCount'], _maxDoseCount);
+           // Ensure max dose count is positive
+           if (firebaseMaxDoseCount != _maxDoseCount && firebaseMaxDoseCount > 0) {
+              _maxDoseCount = firebaseMaxDoseCount;
+              stateChanged = true;
            }
         }
-
 
         // --- Buzzer Control Update (from Firebase) ---
         if (data.containsKey('buzzerControl')) {
-           final firebaseBuzzerControl = _parseIntValue(data['buzzerControl']);
-            if (firebaseBuzzerControl != _buzzerControl && mounted) {
-               setState(() {
-                 _buzzerControl = firebaseBuzzerControl;
-               });
+           final firebaseBuzzerControl = _parseIntValue(data['buzzerControl'], _buzzerControl);
+            if (firebaseBuzzerControl != _buzzerControl) {
+               _buzzerControl = firebaseBuzzerControl;
+               stateChanged = true;
             }
         }
 
         // --- MPU Data Update ---
         if (data.containsKey('MPU') && data['MPU'] is Map) {
           final mpuData = Map<String, dynamic>.from(data['MPU']);
-
+          double tempAccelX = _accelX, tempAccelY = _accelY, tempAccelZ = _accelZ;
+          double tempGyroX = _gyroX, tempGyroY = _gyroY, tempGyroZ = _gyroZ;
+          double tempTemp = _temp;
 
           // Extract accelerometer data
           if (mpuData.containsKey('accelerometer') && mpuData['accelerometer'] is Map) {
             final accelData = Map<String, dynamic>.from(mpuData['accelerometer']);
-            _accelX = _parseDoubleValue(accelData['x']);
-            _accelY = _parseDoubleValue(accelData['y']);
-            _accelZ = _parseDoubleValue(accelData['z']);
+            tempAccelX = _parseDoubleValue(accelData['x'], _accelX);
+            tempAccelY = _parseDoubleValue(accelData['y'], _accelY);
+            tempAccelZ = _parseDoubleValue(accelData['z'], _accelZ);
           }
 
           // Extract gyroscope data
           if (mpuData.containsKey('gyroscope') && mpuData['gyroscope'] is Map) {
             final gyroData = Map<String, dynamic>.from(mpuData['gyroscope']);
-             _gyroX = _parseDoubleValue(gyroData['x']);
-             _gyroY = _parseDoubleValue(gyroData['y']);
-             _gyroZ = _parseDoubleValue(gyroData['z']);
+             tempGyroX = _parseDoubleValue(gyroData['x'], _gyroX);
+             tempGyroY = _parseDoubleValue(gyroData['y'], _gyroY);
+             tempGyroZ = _parseDoubleValue(gyroData['z'], _gyroZ);
           }
 
           // Extract temperature
           if (mpuData.containsKey('temp')) {
-             _temp = _parseDoubleValue(mpuData['temp']);
+             tempTemp = _parseDoubleValue(mpuData['temp'], _temp);
           }
 
-          if (mounted) {
-             setState(() {
-                // Triggers UI update
-             });
+          // Check if any MPU value actually changed
+          if (tempAccelX != _accelX || tempAccelY != _accelY || tempAccelZ != _accelZ ||
+              tempGyroX != _gyroX || tempGyroY != _gyroY || tempGyroZ != _gyroZ ||
+              tempTemp != _temp) {
+              _accelX = tempAccelX;
+              _accelY = tempAccelY;
+              _accelZ = tempAccelZ;
+              _gyroX = tempGyroX;
+              _gyroY = tempGyroY;
+              _gyroZ = tempGyroZ;
+              _temp = tempTemp;
+              stateChanged = true;
           }
+        }
 
+        // --- Apply state changes if necessary ---
+        if (stateChanged && mounted) {
+           setState(() {
+              // This single setState call updates the UI with all changed values
+           });
         }
 
         // Final connection status update (redundant if already connected, but safe)
@@ -504,41 +414,34 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
              });
          }
 
-     } catch (e) {
+     } catch (e, stacktrace) { // Catch potential errors during parsing
          print('Error parsing data: $e');
          print('Problematic data chunk: $rawData'); // Log the raw data that caused the error
+         print('Stacktrace: $stacktrace');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Error processing incoming data: ${e.toString()}')),
             );
           }
-          // Consider if you want to set _isConnected to false here
+          // Decide if you want to set _isConnected to false here based on parsing errors
+          // setState(() => _isConnected = false );
      }
   }
 
-
-  // Helper method to parse int values safely
-  int _parseIntValue(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) {
-      return value;
-    } else if (value is double) {
-      return value.toInt();
-    } else {
-      return int.tryParse(value.toString()) ?? 0;
-    }
+  // Helper method to parse int values safely, returning a default if parsing fails
+  int _parseIntValue(dynamic value, int defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString()) ?? defaultValue;
   }
 
-   // Helper method to parse double values safely
-  double _parseDoubleValue(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is double) {
-      return value;
-    } else if (value is int) {
-      return value.toDouble();
-    } else {
-      return double.tryParse(value.toString()) ?? 0.0;
-    }
+   // Helper method to parse double values safely, returning a default if parsing fails
+  double _parseDoubleValue(dynamic value, double defaultValue) {
+    if (value == null) return defaultValue;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value.toString()) ?? defaultValue;
   }
 
 
@@ -549,42 +452,53 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
             const SnackBar(content: Text('Not connected to inhaler.')));
         return;
      }
+     // Check if dbRef is initialized
+     if (_dbRef == null) {
+        print("Cannot update buzzer: Database reference is null.");
+         ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Database connection not ready.')));
+        return;
+     }
 
-     final nextBuzzerState = _buzzerControl == 0 ? 29 : 0; // Determine next state
+     final nextBuzzerState = _buzzerControl == 0 ? 29 : 0; // Toggle between 0 and 29
 
      try {
         print('Attempting to set buzzerControl to $nextBuzzerState');
         await _dbRef.update({'buzzerControl': nextBuzzerState});
         print('Buzzer control update sent successfully.');
 
-        // Update local state optimistically *after* successful send
+        // Optimistic UI update: Update local state immediately after sending
+        // The listener will correct it if Firebase reports a different value later.
         if (mounted) {
            setState(() {
              _buzzerControl = nextBuzzerState;
            });
         }
 
-
         // Cancel any existing auto-reset timer
         _buzzerResetTimer?.cancel();
 
-        // If activating, start auto-reset timer
+        // If activating (setting to 29), start auto-reset timer
         if (nextBuzzerState == 29) {
            _buzzerResetTimer = Timer(const Duration(seconds: 5), () async {
-             // Check if buzzer is *still* active before resetting
-             if (_buzzerControl == 29) {
+             // Check if buzzer is *still* active (value hasn't changed back) before resetting
+             // Also check connection and dbRef status again
+             if (_buzzerControl == 29 && _isConnected && _dbRef != null && mounted) {
                  print('Auto-resetting buzzer control to 0');
                  try {
                     await _dbRef.update({'buzzerControl': 0});
-                    if (mounted) {
-                       setState(() { _buzzerControl = 0;});
-                    }
+                    // Update local state on successful auto-reset
+                    if(mounted) setState(() => _buzzerControl = 0);
                  } catch (e) {
                      print('Error auto-resetting buzzer control: $e');
-                     // Handle error - maybe show a snackbar
+                     if(mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         SnackBar(content: Text('Error auto-resetting buzzer: ${e.toString()}')),
+                       );
+                     }
                  }
              } else {
-                 print('Buzzer was manually turned off before auto-reset.');
+                 print('Buzzer state changed or disconnected before auto-reset timer fired.');
              }
            });
         }
@@ -594,82 +508,99 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error updating buzzer: ${e.toString()}')),
           );
+           // Optional: Revert optimistic UI update on error
+           // setState(() { _buzzerControl = (_buzzerControl == 0 ? 29 : 0); }); // Revert back
         }
      }
   }
 
   // Function to edit dose count
-  void _editDoseCount() {
-     if (!_isConnected && !_isInitializing) { // Allow edit even if initializing maybe? Or check !isInitializing
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cannot edit dose count while disconnected.')));
-        return;
+ void _editDoseCount() {
+     // Allow editing even if temporarily disconnected, but check dbRef
+     if (_dbRef == null) {
+         ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Cannot edit dose count: Database not initialized.')));
+         return;
      }
+      if (!_isConnected && !_isInitializing) {
+         ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Warning: Editing while offline. Changes might not save immediately.')));
+         // Allow proceeding, but maybe warn the user
+      }
 
-    final newDoseCountController = TextEditingController(text: _doseCount.toString());
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Edit Dose Count'),
-          content: TextField(
-            controller: newDoseCountController,
-            keyboardType: TextInputType.number,
-            autofocus: true, // Focus the field immediately
-            decoration: InputDecoration(
-              labelText: 'Enter remaining doses',
-              hintText: _doseCount.toString(),
-              suffixText: '/ $_maxDoseCount', // Show max doses
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final newDoseCountInt = int.tryParse(newDoseCountController.text);
-                if (newDoseCountInt == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid number.')),
-                  );
-                  return; // Keep dialog open
-                }
-                if (newDoseCountInt < 0 || newDoseCountInt > _maxDoseCount) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Dose count must be between 0 and $_maxDoseCount.')),
-                  );
-                  return; // Keep dialog open
-                }
+     final newDoseCountController = TextEditingController(text: _doseCount.toString());
+     showDialog(
+       context: context,
+       builder: (BuildContext context) {
+         return AlertDialog(
+           title: const Text('Edit Dose Count'),
+           content: TextField(
+             controller: newDoseCountController,
+             keyboardType: TextInputType.number,
+             autofocus: true,
+             decoration: InputDecoration(
+               labelText: 'Enter remaining doses',
+               hintText: 'Current: $_doseCount', // Show current value clearly
+               suffixText: '/ $_maxDoseCount', // Show max doses
+               border: const OutlineInputBorder(),
+             ),
+             // InputFormatters can be used for better validation
+             // inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+           ),
+           actions: [
+             TextButton(
+               onPressed: () => Navigator.of(context).pop(),
+               child: const Text('Cancel'),
+             ),
+             TextButton(
+               onPressed: () {
+                 final newDoseCountStr = newDoseCountController.text;
+                 final newDoseCountInt = int.tryParse(newDoseCountStr);
 
-                // Update Firebase first
-                _dbRef.update({'doseCount': newDoseCountInt}).then((_) {
-                   print("Manual dose count update to $newDoseCountInt successful.");
-                   // Update local state on success
-                   if (mounted) {
-                     setState(() {
-                       _doseCount = newDoseCountInt;
-                     });
-                   }
-                   Navigator.of(context).pop(); // Close dialog on success
-                }).catchError((error) {
-                    print("Error manually updating dose count: $error");
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to save dose count: $error')),
-                    );
-                     // Don't close dialog on error
-                });
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+                 if (newDoseCountInt == null) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(content: Text('Please enter a valid whole number.')),
+                   );
+                   return; // Keep dialog open
+                 }
+                 if (newDoseCountInt < 0 || newDoseCountInt > _maxDoseCount) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     SnackBar(content: Text('Dose count must be between 0 and $_maxDoseCount.')),
+                   );
+                   return; // Keep dialog open
+                 }
+
+                 // Prevent saving if the value hasn't changed
+                 if (newDoseCountInt == _doseCount) {
+                    Navigator.of(context).pop(); // Just close if no change
+                    return;
+                 }
+
+                 // Update Firebase
+                 _dbRef.update({'doseCount': newDoseCountInt}).then((_) {
+                    print("Manual dose count update to $newDoseCountInt successful.");
+                    // Update local state only on success
+                    // No need for setState here as the listener should pick it up,
+                    // but you could add it for immediate visual feedback if the listener is slow.
+                    // if (mounted) { setState(() => _doseCount = newDoseCountInt); }
+                    Navigator.of(context).pop(); // Close dialog on success
+                 }).catchError((error) {
+                     print("Error manually updating dose count: $error");
+                     if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                         SnackBar(content: Text('Failed to save dose count: $error')),
+                       );
+                     }
+                      // Don't close dialog on error
+                 });
+               },
+               child: const Text('Save'),
+             ),
+           ],
+         );
+       },
+     );
+   }
 
   @override
   void dispose() {
@@ -677,6 +608,9 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
     _subscription?.cancel();
     _doseCountResetTimer?.cancel();
     _buzzerResetTimer?.cancel();
+    // It's generally good practice to close the database connection if the app is completely closing,
+    // but Firebase handles this reasonably well. Avoid closing if just disposing the widget.
+    // FirebaseDatabase.instance.goOffline(); // Use with caution
     super.dispose();
   }
 
@@ -691,7 +625,7 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
            children: [
              CircularProgressIndicator(),
              SizedBox(height: 16),
-             Text('Initializing connection...'),
+             Text('Connecting to Inhaler...'),
            ],
          ),
        );
@@ -701,25 +635,31 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
               padding: const EdgeInsets.all(20.0),
               child: Column(
                  mainAxisAlignment: MainAxisAlignment.center,
+                 crossAxisAlignment: CrossAxisAlignment.center,
                  children: [
                     Icon(Icons.cloud_off, size: 60, color: Colors.red[300]),
                     const SizedBox(height: 16),
                     const Text(
-                      'Disconnected from Inhaler',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      'Inhaler Offline',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                      const Text(
-                       'Please check the device connection and your internet.',
+                       'Check device power/connection and internet access. Data shown may be outdated.',
                        textAlign: TextAlign.center,
                        style: TextStyle(color: Colors.grey),
                     ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon( // Add a retry button maybe?
+                    const SizedBox(height: 25),
+                    ElevatedButton.icon(
                        icon: const Icon(Icons.refresh),
                        label: const Text('Retry Connection'),
                        onPressed: _initializeDatabase, // Re-run initialization
+                       style: ElevatedButton.styleFrom(
+                         // backgroundColor: Colors.blueAccent,
+                         // foregroundColor: Colors.white,
+                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)
+                       ),
                     )
                  ],
               ),
@@ -728,118 +668,129 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
      } else {
        // --- Connected State ---
        bodyContent = SingleChildScrollView(
-         child: Padding(
-           padding: const EdgeInsets.all(16.0),
-           child: Column(
-             mainAxisAlignment: MainAxisAlignment.start,
-             children: [
-               DoseCounter(
-                 doseCount: _doseCount,
-                 maxDoseCount: _maxDoseCount,
-                 onEdit: _editDoseCount,
+         physics: const AlwaysScrollableScrollPhysics(), // Ensure scrolling even if content fits
+         padding: const EdgeInsets.all(16.0), // Padding around the scroll view content
+         child: Column(
+           mainAxisAlignment: MainAxisAlignment.start,
+           children: [
+              // --- Use the imported DoseCounter widget ---
+              DoseCounter(
+                doseCount: _doseCount,
+                maxDoseCount: _maxDoseCount,
+                onEdit: _editDoseCount,
+              ),
+              const SizedBox(height: 24),
+              MotionSensorNumericalData(
+                accelX: _accelX,
+                accelY: _accelY,
+                accelZ: _accelZ,
+                gyroX: _gyroX,
+                gyroY: _gyroY,
+                gyroZ: _gyroZ,
+                temp: _temp,
+              ),
+              const SizedBox(height: 24),
+              BuzzerControl(
+                buzzerControl: _buzzerControl,
+                onToggle: _updateBuzzerControl,
+              ),
+              const SizedBox(height: 30),
+               // --- Navigation Buttons ---
+               _buildNavigationButton(
+                 context: context,
+                 text: 'View FSR & History', // Example text
+                 targetScreen: const FirebaseDataScreen2(), // Your Screen 2
                ),
-               const SizedBox(height: 24), // More space after counter
-               MotionSensorNumericalData(
-                 accelX: _accelX,
-                 accelY: _accelY,
-                 accelZ: _accelZ,
-                 gyroX: _gyroX,
-                 gyroY: _gyroY,
-                 gyroZ: _gyroZ,
-                 temp: _temp,
+               const SizedBox(height: 15),
+               _buildNavigationButton(
+                 context: context,
+                 text: 'View Sensor Graphs', // Example text
+                 targetScreen: const GraphScreen(), // Your Graph Screen
                ),
-               const SizedBox(height: 24),
-               BuzzerControl(
-                 buzzerControl: _buzzerControl,
-                 onToggle: _updateBuzzerControl,
-               ),
-               const SizedBox(height: 30), // Space before the new button
-               // --- Navigation Button ---
-               ElevatedButton(
-                 onPressed: () {
-                   Navigator.push(
-                     context,
-                     MaterialPageRoute(builder: (context) => const FirebaseDataScreen2()),
-                   );
-                 },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50), // Make button wider
-                    // backgroundColor: Colors.deepPurpleAccent, // Example styling
-                     shape: RoundedRectangleBorder(
-                       borderRadius: BorderRadius.circular(12),
-                     )
-                  ),
-                 child: const Text('Go to Screen 2'),
-               ),
-               const SizedBox(height: 20), // Some padding at the bottom
-               ElevatedButton( // Add graph screen navigation
-                 onPressed: () {
-                   Navigator.push(
-                     context,
-                     MaterialPageRoute(builder: (context) => const GraphScreen()),
-                   );
-                 },
-                 style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50), // Make button wider
-                    // backgroundColor: Colors.deepPurpleAccent, // Example styling
-                     shape: RoundedRectangleBorder(
-                       borderRadius: BorderRadius.circular(12),
-                     )
-                  ),
-                 child: const Text('View Graphs'),
-               ),
-               const SizedBox(height: 20),
+               const SizedBox(height: 20), // Bottom padding inside scroll view
              ],
            ),
-         ),
        );
      }
 
     return Scaffold(
       backgroundColor: Colors.grey[100], // Light background
       appBar: AppBar(
-        title: const Text('Smart Inhaler Dashboard'), // More descriptive title
-        elevation: 1, // Subtle shadow
-        backgroundColor: Colors.white, // White appbar
-        foregroundColor: _textColor, // Dark text on white appbar
+        title: const Text('Smart Inhaler'), // Simplified title
+        elevation: 1,
+        backgroundColor: Colors.white,
+        foregroundColor: _textColor,
         actions: [
           // Connection status indicator
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: Center( // Center the indicator vertically
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                   color: _isConnected ? Colors.green[100] : Colors.red[100],
-                   borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                       _isConnected ? Icons.wifi : Icons.wifi_off,
-                       color: _isConnected ? Colors.green[800] : Colors.red[800],
-                       size: 16,
-                     ),
-                     const SizedBox(width: 4),
-                      Text(
-                       _isConnected ? 'Connected' : 'Offline',
-                       style: TextStyle(
-                          color: _isConnected ? Colors.green[800] : Colors.red[800],
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold
+            child: Center(
+              child: Tooltip( // Add tooltip for clarity
+                message: _isConnected ? 'Connected to Firebase' : 'Disconnected from Firebase',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                     color: _isConnected ? Colors.green[100] : Colors.red[100],
+                     borderRadius: BorderRadius.circular(10),
+                     border: Border.all(
+                        color: _isConnected ? Colors.green[300]! : Colors.red[300]!,
+                        width: 0.5
+                     )
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                         _isConnected ? Icons.wifi : Icons.wifi_off,
+                         color: _isConnected ? Colors.green[800] : Colors.red[800],
+                         size: 16,
                        ),
-                     ),
-                  ],
+                       const SizedBox(width: 4),
+                        Text(
+                         _isConnected ? 'Online' : 'Offline', // Shorter text
+                         style: TextStyle(
+                            color: _isConnected ? Colors.green[800] : Colors.red[800],
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold
+                         ),
+                       ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ],
       ),
-      body: SafeArea( // Added SafeArea
-        child: bodyContent, // Display the appropriate content
+      body: SafeArea( // Use SafeArea
+        child: bodyContent, // Display the appropriate content based on state
       ),
     );
   }
+
+ // Helper method for creating styled navigation buttons
+ Widget _buildNavigationButton({
+    required BuildContext context,
+    required String text,
+    required Widget targetScreen,
+ }) {
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => targetScreen),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 50), // Full width, fixed height
+        // backgroundColor: Theme.of(context).primaryColor, // Use theme color
+        // foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)
+      ),
+      child: Text(text),
+    );
+ }
 }

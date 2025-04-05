@@ -1,104 +1,19 @@
+//screen1.dart (or your main screen file name)
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dart:async';
+
+// Import the separated widgets and other screens
 import 'dose_counter.dart';
 import 'graphscreen.dart';
-import 'test.dart'; // Import screen 2 (assuming this is the correct name)
+import 'test.dart'; // Import screen 2
 import 'buzzer_control.dart'; // Import BuzzerControl
+import 'motionDataWidget.dart'; // <-- IMPORT THE NEW WIDGET FILE
 
 // --- Constants (Used by widgets remaining in this file) ---
-const Color _motionSensorCardColor = Color(0xFFB2EBF2); // Light Teal
-const Color _buzzerButtonColor = Color(0xFFFFAB91); // Warm Coral (If used by BuzzerControl internally)
-const Color _textColor = Color(0xFF212121); // Used by MotionSensorNumericalData & AppBar
-const double _cardCornerRadius = 12.0; // Used by MotionSensorNumericalData
-const double _cardElevation = 4.0; // Used by MotionSensorNumericalData
-
-// --- Motion Sensor Data Widget (Numerical Values Only) ---
-class MotionSensorNumericalData extends StatelessWidget {
-  final double accelX;
-  final double accelY;
-  final double accelZ;
-  final double gyroX;
-  final double gyroY;
-  final double gyroZ;
-  final double temp;
-
-  const MotionSensorNumericalData({
-    Key? key,
-    required this.accelX,
-    required this.accelY,
-    required this.accelZ,
-    required this.gyroX,
-    required this.gyroY,
-    required this.gyroZ,
-    required this.temp,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: _cardElevation,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(_cardCornerRadius),
-      ),
-      color: _motionSensorCardColor,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Motion Sensor Data', // Simplified title
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-                color: _textColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildDataRow('Accel X:', accelX.toStringAsFixed(3)),
-            _buildDataRow('Accel Y:', accelY.toStringAsFixed(3)),
-            _buildDataRow('Accel Z:', accelZ.toStringAsFixed(3)),
-             const Divider(height: 16, thickness: 1), // Separator
-            _buildDataRow('Gyro X:', gyroX.toStringAsFixed(3)),
-            _buildDataRow('Gyro Y:', gyroY.toStringAsFixed(3)),
-            _buildDataRow('Gyro Z:', gyroZ.toStringAsFixed(3)),
-            const Divider(height: 16, thickness: 1), // Separator
-            _buildDataRow('Temperature:', '${temp.toStringAsFixed(1)} °C'), // Added space
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDataRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-             // fontWeight: FontWeight.w500, // Normal weight might be better here
-              color: _textColor,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: _textColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+// Note: Removed constants specific to MotionSensorNumericalData
+// const Color _buzzerButtonColor = Color(0xFFFFAB91); // Example if BuzzerControl needs it externally
+const Color _textColor = Color(0xFF212121); // Keep if used by AppBar or other widgets here
 
 // --- Main Dashboard Screen Widget ---
 class InhalerDashboardScreen1 extends StatefulWidget {
@@ -116,7 +31,7 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
 
   // Variables for dose tracking
   int _doseCount = 90; // Default value
-  int _maxDoseCount = 100; // Default value
+  int _maxDoseCount = 200; // Default value
 
   // Variables to store MPU6050 data
   double _accelX = 0.0;
@@ -267,7 +182,7 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
     }
   }
 
-  // Centralized data parsing logic
+ // Centralized data parsing logic
  void _parseData(dynamic rawData) {
      if (rawData == null || rawData is! Map) {
         print('Invalid or null data received for parsing.');
@@ -679,8 +594,31 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
                 maxDoseCount: _maxDoseCount,
                 onEdit: _editDoseCount,
               ),
-              const SizedBox(height: 24),
-              MotionSensorNumericalData(
+              const SizedBox(height: 24), // Spacing after dose counter
+
+              // --- Use the imported BuzzerControl widget ---
+              BuzzerControl(
+                buzzerControl: _buzzerControl,
+                onToggle: _updateBuzzerControl,
+              ),
+              const SizedBox(height: 30), // Spacing after buzzer control
+
+               // --- Navigation Buttons ---
+               _buildNavigationButton(
+                 context: context,
+                 text: 'View FSR & History', // Example text
+                 targetScreen: const FirebaseDataScreen2(), // Your Screen 2
+               ),
+               const SizedBox(height: 15), // Spacing between buttons
+               _buildNavigationButton(
+                 context: context,
+                 text: 'View Sensor Graphs', // Example text
+                 targetScreen: const GraphScreen(), // Your Graph Screen
+               ),
+               const SizedBox(height: 30), // Spacing before sensor data
+
+               // --- Use the imported MotionSensorNumericalData widget ---
+               MotionSensorNumericalData(
                 accelX: _accelX,
                 accelY: _accelY,
                 accelZ: _accelZ,
@@ -689,25 +627,7 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
                 gyroZ: _gyroZ,
                 temp: _temp,
               ),
-              const SizedBox(height: 24),
-              BuzzerControl(
-                buzzerControl: _buzzerControl,
-                onToggle: _updateBuzzerControl,
-              ),
-              const SizedBox(height: 30),
-               // --- Navigation Buttons ---
-               _buildNavigationButton(
-                 context: context,
-                 text: 'View FSR & History', // Example text
-                 targetScreen: const FirebaseDataScreen2(), // Your Screen 2
-               ),
-               const SizedBox(height: 15),
-               _buildNavigationButton(
-                 context: context,
-                 text: 'View Sensor Graphs', // Example text
-                 targetScreen: const GraphScreen(), // Your Graph Screen
-               ),
-               const SizedBox(height: 20), // Bottom padding inside scroll view
+              const SizedBox(height: 20), // Bottom padding inside scroll view
              ],
            ),
        );
@@ -719,7 +639,7 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
         title: const Text('Smart Inhaler'), // Simplified title
         elevation: 1,
         backgroundColor: Colors.white,
-        foregroundColor: _textColor,
+        foregroundColor: _textColor, // Use constant defined at top
         actions: [
           // Connection status indicator
           Padding(

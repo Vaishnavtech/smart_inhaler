@@ -19,8 +19,8 @@ import 'buzzer_control.dart';    // Import definition for BuzzerControl
 const Color _textColor = Color(0xFF212121);
 
 // --- Threshold Constants (Updated FSR3) ---
-const int FSR1_THRESHOLD = 500;
-const int FSR2_THRESHOLD = 50;
+const int FSR1_THRESHOLD = 50;
+const int FSR2_THRESHOLD = 500;
 const int FSR3_THRESHOLD = 2000; // <-- UPDATED threshold as per new requirement
 const double GYRO_Z_THRESHOLD = 7.0;
 

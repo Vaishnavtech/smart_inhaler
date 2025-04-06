@@ -1,16 +1,18 @@
 //screen1.dart (or your main screen file name)
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:async';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // <-- IMPORT NOTIFICATION PLUGIN
 
-// Import the separated widgets and other screens
-// --- Ensure these files exist and contain the necessary widgets ---
+// --- Import Separated Components ---
+import 'notification_service.dart'; // <-- Import Notification Service
+import 'stats_grid.dart';           // <-- Import Stats Grid Widget
+
+// Import other widgets and screens (ensure paths are correct)
 import 'dose_counter.dart';     // Import definition for DoseCounter
 import 'graphscreen.dart';      // Assume this is your graphs screen
 import 'test.dart';            // Assume this is FirebaseDataScreen2 (adjust name if needed)
 import 'buzzer_control.dart';    // Import definition for BuzzerControl
-
 
 // --- Constants ---
 const Color _textColor = Color(0xFF212121);
@@ -30,17 +32,16 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
   bool _isInitializing = true;
 
   // Variables for dose tracking
-  int _doseCount = 90; // Initial value, will be updated from Firebase
-  int _maxDoseCount = 200; // Initial value, will be updated from Firebase
+  int _doseCount = 90;
+  int _maxDoseCount = 200;
 
-  // --- NEW State Variables for the Stats Grid ---
-  int _correctCount = 0; // Default, updated from Firebase Counts/correctCount
-  int _falseCount = 0;   // Default, updated from Firebase Counts/falseCount
-  int _dailyDosesTaken = 0; // Default, needs Firebase field (e.g., Counts/dailyDosesTaken)
-  final int _dailyDoseLimit = 5; // Hardcoded daily limit based on requirement
-  // --- End NEW State Variables ---
+  // Variables for the Stats Grid
+  int _correctCount = 0;
+  int _falseCount = 0;
+  int _dailyDosesTaken = 0;
+  final int _dailyDoseLimit = 5;
 
-  // Variables to store MPU6050 data
+  // Variables to store MPU6050 data (keep if displayed elsewhere or needed)
   double _accelX = 0.0;
   double _accelY = 0.0;
   double _accelZ = 0.0;
@@ -62,113 +63,31 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
   Timer? _buzzerResetTimer;
 
   // --- Notification Setup ---
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  bool _lowDoseNotificationShown = false; // Track if notification was shown
+  // Use the NotificationService class
+  late final NotificationService _notificationService; // Declare
+  bool _lowDoseNotificationShown = false; // Still managed here
 
   @override
   void initState() {
     super.initState();
-    _initializeNotifications(); // Initialize notifications first
+     _notificationService = NotificationService( // Initialize service instance
+       onNotificationTap: (NotificationResponse response) async {
+         print("Notification tapped from screen1: ${response.payload}");
+         // Add navigation or other actions here if needed based on payload
+       }
+     );
+    _notificationService.init(context); // Initialize notifications via service
     _initializeDatabase();
   }
 
-  // --- Initialize Local Notifications ---
-  Future<void> _initializeNotifications() async {
-    // Android Initialization Settings
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('ic_launcher'); // Use your app icon name
-
-    // iOS Initialization Settings
-    const DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
-
-    // Initialize the plugin
-    try {
-        await _flutterLocalNotificationsPlugin.initialize(
-          initializationSettings,
-          onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) async {
-              print('Notification tapped: ${notificationResponse.payload}');
-              // Optional: Handle notification tap
-          },
-        );
-        print("Notification Plugin Initialized");
-
-        // Request Android 13+ permission if needed
-         // Check if context is available before using Theme.of(context)
-         // It's generally safer to request permission after the first frame
-         WidgetsBinding.instance.addPostFrameCallback((_) async {
-             if (mounted && Theme.of(context).platform == TargetPlatform.android) {
-                 final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-                     _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-                             AndroidFlutterLocalNotificationsPlugin>();
-                 final bool? granted = await androidImplementation?.requestNotificationsPermission();
-                 print("Android Notification Permission Granted: $granted");
-             }
-         });
-
-
-    } catch(e) {
-       print("Error initializing notifications: $e");
-    }
-  }
-
-  // --- Show Low Dose Notification ---
-  Future<void> _showLowDoseNotification(int currentDose, int maxDose) async {
-    // Android Notification Details
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails(
-      'low_dose_channel', // Channel ID
-      'Low Dose Alerts', // Channel Name
-      channelDescription: 'Notifications for low inhaler dose count',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'Low Dose Alert',
-      playSound: true,
-      enableVibration: true,
-    );
-
-    // iOS Notification Details
-    const DarwinNotificationDetails darwinNotificationDetails =
-        DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    // Combined Notification Details
-    const NotificationDetails notificationDetails = NotificationDetails(
-        android: androidNotificationDetails, iOS: darwinNotificationDetails);
-
-    // Show the notification
-    try {
-      await _flutterLocalNotificationsPlugin.show(
-        0, // Notification ID
-        'Low Inhaler Dose', // Title
-        'Only $currentDose doses remaining (out of $maxDose). Please refill soon.', // Body
-        notificationDetails,
-      );
-      print("Low dose notification shown.");
-    } catch (e) {
-      print("Error showing notification: $e");
-    }
-  }
-
+  // --- REMOVED: _initializeNotifications() ---
+  // --- REMOVED: _showLowDoseNotification() ---
 
   Future<void> _initializeDatabase() async {
+    // ... (database initialization logic remains the same)
     if (mounted) setState(() { _isInitializing = true; });
     try {
       FirebaseDatabase database = FirebaseDatabase.instance;
-      // Ensure your database URL is correct
       database.databaseURL =
           'https://smart-inhaler-db-default-rtdb.asia-southeast1.firebasedatabase.app/';
       _dbRef = database.ref();
@@ -179,7 +98,7 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
          final snapshot = await _dbRef.get().timeout(const Duration(seconds: 10));
          if (snapshot.exists && snapshot.value != null) {
             print('Initial data fetched.');
-            _parseData(snapshot.value); // Parse initial data
+            _parseData(snapshot.value);
             if(mounted) setState(() { _isConnected = true; });
          } else {
             print('Initial data fetch: No data found.');
@@ -193,19 +112,16 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
       }
 
       // Listener for updates
-      // No need to check _dbRef for null here as it's assigned above or throws
-      _subscription?.cancel(); // Cancel previous subscription if exists
+      _subscription?.cancel();
       _subscription = _dbRef.onValue.listen(
         (DatabaseEvent event) {
           if (mounted && event.snapshot.value != null) {
-             _parseData(event.snapshot.value); // <--- PARSE DATA HERE
+             _parseData(event.snapshot.value);
              if (!_isConnected) {
                setState(() { _isConnected = true; });
              }
           } else if (event.snapshot.value == null) {
              print('No data received from Firebase stream (null snapshot).');
-             // Optionally handle this case, e.g., set _isConnected to false
-             // if (mounted && _isConnected) setState(() => _isConnected = false);
           }
         },
         onError: (error) {
@@ -225,7 +141,6 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
         },
       );
 
-
     } catch (e) {
        print('Error setting up database reference: $e');
         if (mounted) {
@@ -239,6 +154,7 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
 
  // Centralized data parsing logic
 void _parseData(dynamic rawData) {
+     // ... (parsing logic for FSR, MPU, buzzer, etc. remains the same)
      if (rawData == null || rawData is! Map) {
         print('Invalid or null data received for parsing.');
         return;
@@ -249,7 +165,7 @@ void _parseData(dynamic rawData) {
         bool stateChanged = false;
 
         // Temporarily store old values needed for checks
-        final int oldDoseCount = _doseCount; // Keep track of old dose value
+        final int oldDoseCount = _doseCount;
         final int oldMaxDoseCount = _maxDoseCount;
         final int oldFSR1 = _fsrSensor1;
         final int oldFSR2 = _fsrSensor2;
@@ -269,19 +185,17 @@ void _parseData(dynamic rawData) {
           bool allPressedNow = newFSR1 > pressThreshold && newFSR2 > pressThreshold && newFSR3 > pressThreshold;
           bool notAllPressedBefore = oldFSR1 <= pressThreshold || oldFSR2 <= pressThreshold || oldFSR3 <= pressThreshold;
 
-          // *** Use the CURRENT _doseCount which was updated from Firebase listener ***
           if (allPressedNow && notAllPressedBefore && _doseCount > 0 && !_doseCounted) {
              print("Dose condition met! Attempting to decrement count.");
              _doseCounted = true;
-             final newDoseCount = _doseCount - 1; // Calculate new value based on current state
+             final newDoseCount = _doseCount - 1;
 
-             // *** CORRECT FIREBASE PATH for dose count update ***
              _dbRef.update({'Counts/doseCount': newDoseCount}).then((_) {
                 print("Firebase Counts/doseCount updated to $newDoseCount");
                 // Listener will update _doseCount state variable
              }).catchError((error) {
                 print("Error updating Firebase Counts/doseCount: $error");
-                 _doseCounted = false; // Reset flag on error
+                 _doseCounted = false;
              });
 
              _doseCountResetTimer?.cancel();
@@ -299,18 +213,15 @@ void _parseData(dynamic rawData) {
           }
         }
 
-        // --- REMOVED: Top-level doseCount parsing (it's inside Counts now) ---
-        // if (data.containsKey('doseCount')) { ... }
 
         // --- Max Dose Count Update (from Firebase) ---
-        // Keep checking both top-level and inside Counts for flexibility
          if (data.containsKey('maxDoseCount')) {
            final firebaseMaxDoseCount = _parseIntValue(data['maxDoseCount'], _maxDoseCount);
            if (firebaseMaxDoseCount != _maxDoseCount && firebaseMaxDoseCount > 0) {
               _maxDoseCount = firebaseMaxDoseCount;
               print("Max dose count updated from Firebase (top-level): $_maxDoseCount");
               stateChanged = true;
-              _lowDoseNotificationShown = false;
+              _lowDoseNotificationShown = false; // Reset flag on max dose change too
            }
          } else if (data.containsKey('Counts') && data['Counts'] is Map && data['Counts']['maxDoseCount'] != null) {
              final countsData = Map<String, dynamic>.from(data['Counts']);
@@ -319,7 +230,7 @@ void _parseData(dynamic rawData) {
                  _maxDoseCount = firebaseMaxDoseCount;
                  print("Max dose count updated from Firebase (Counts map): $_maxDoseCount");
                  stateChanged = true;
-                 _lowDoseNotificationShown = false;
+                  _lowDoseNotificationShown = false; // Reset flag on max dose change too
               }
          }
 
@@ -328,14 +239,12 @@ void _parseData(dynamic rawData) {
         if (data.containsKey('Counts') && data['Counts'] is Map) {
           final countsData = Map<String, dynamic>.from(data['Counts']);
 
-          // *** PARSE doseCount HERE ***
           final firebaseDoseCount = _parseIntValue(countsData['doseCount'], _doseCount);
           if (firebaseDoseCount != _doseCount) {
-             _doseCount = firebaseDoseCount; // Update local value from Counts map
+             _doseCount = firebaseDoseCount;
              print("Dose count updated from Firebase listener (Counts map): $_doseCount");
              stateChanged = true;
           }
-          // *** END PARSE doseCount ***
 
           final newCorrectCount = _parseIntValue(countsData['correctCount'], _correctCount);
           final newFalseCount = _parseIntValue(countsData['falseCount'], _falseCount);
@@ -358,7 +267,6 @@ void _parseData(dynamic rawData) {
           }
         } else {
             print("Warning: 'Counts' map not found or not a map in Firebase data.");
-            // If 'Counts' doesn't exist, _doseCount, _correctCount etc retain old values
         }
 
 
@@ -374,74 +282,62 @@ void _parseData(dynamic rawData) {
 
         // --- MPU Data Update ---
         if (data.containsKey('MPU') && data['MPU'] is Map) {
-          final mpuData = Map<String, dynamic>.from(data['MPU']);
-          double tempAccelX = _accelX, tempAccelY = _accelY, tempAccelZ = _accelZ;
-          double tempGyroX = _gyroX, tempGyroY = _gyroY, tempGyroZ = _gyroZ;
-          double tempTemp = _temp;
-          if (mpuData.containsKey('accelerometer') && mpuData['accelerometer'] is Map) {
-            final accelData = Map<String, dynamic>.from(mpuData['accelerometer']);
-            tempAccelX = _parseDoubleValue(accelData['x'], _accelX);
-            tempAccelY = _parseDoubleValue(accelData['y'], _accelY);
-            tempAccelZ = _parseDoubleValue(accelData['z'], _accelZ);
-          }
-          if (mpuData.containsKey('gyroscope') && mpuData['gyroscope'] is Map) {
-            final gyroData = Map<String, dynamic>.from(mpuData['gyroscope']);
-             tempGyroX = _parseDoubleValue(gyroData['x'], _gyroX);
-             tempGyroY = _parseDoubleValue(gyroData['y'], _gyroY);
-             tempGyroZ = _parseDoubleValue(gyroData['z'], _gyroZ);
-          }
-          if (mpuData.containsKey('temp')) {
-             tempTemp = _parseDoubleValue(mpuData['temp'], _temp);
-          }
-          if (tempAccelX != _accelX || tempAccelY != _accelY || tempAccelZ != _accelZ ||
-              tempGyroX != _gyroX || tempGyroY != _gyroY || tempGyroZ != _gyroZ ||
-              tempTemp != _temp) {
-              _accelX = tempAccelX; _accelY = tempAccelY; _accelZ = tempAccelZ;
-              _gyroX = tempGyroX; _gyroY = tempGyroY; _gyroZ = tempGyroZ;
-              _temp = tempTemp;
-              // Avoid excessive state updates if MPU data changes frequently but isn't critical for UI redraw
-              // Only set stateChanged = true if you *need* the UI to update on every MPU change
-              // For the numerical display widget, we DO need it.
-              stateChanged = true;
-          }
+          // ... (MPU parsing remains the same)
+           final mpuData = Map<String, dynamic>.from(data['MPU']);
+           double tempAccelX = _accelX, tempAccelY = _accelY, tempAccelZ = _accelZ;
+           double tempGyroX = _gyroX, tempGyroY = _gyroY, tempGyroZ = _gyroZ;
+           double tempTemp = _temp;
+           if (mpuData.containsKey('accelerometer') && mpuData['accelerometer'] is Map) {
+             final accelData = Map<String, dynamic>.from(mpuData['accelerometer']);
+             tempAccelX = _parseDoubleValue(accelData['x'], _accelX);
+             tempAccelY = _parseDoubleValue(accelData['y'], _accelY);
+             tempAccelZ = _parseDoubleValue(accelData['z'], _accelZ);
+           }
+           if (mpuData.containsKey('gyroscope') && mpuData['gyroscope'] is Map) {
+             final gyroData = Map<String, dynamic>.from(mpuData['gyroscope']);
+              tempGyroX = _parseDoubleValue(gyroData['x'], _gyroX);
+              tempGyroY = _parseDoubleValue(gyroData['y'], _gyroY);
+              tempGyroZ = _parseDoubleValue(gyroData['z'], _gyroZ);
+           }
+           if (mpuData.containsKey('temp')) {
+              tempTemp = _parseDoubleValue(mpuData['temp'], _temp);
+           }
+           if (tempAccelX != _accelX || tempAccelY != _accelY || tempAccelZ != _accelZ ||
+               tempGyroX != _gyroX || tempGyroY != _gyroY || tempGyroZ != _gyroZ ||
+               tempTemp != _temp) {
+               _accelX = tempAccelX; _accelY = tempAccelY; _accelZ = tempAccelZ;
+               _gyroX = tempGyroX; _gyroY = tempGyroY; _gyroZ = tempGyroZ;
+               _temp = tempTemp;
+               stateChanged = true;
+           }
         }
 
 
         // --- *** Check for Low Dose Notification *** ---
-        // Check if dose count or max dose count changed, or if it's the initial load
-        // Ensure maxDoseCount is positive to avoid division by zero or weird thresholds
-        if ((_doseCount != oldDoseCount || _maxDoseCount != oldMaxDoseCount || (_isInitializing && !_isConnected)) && _maxDoseCount > 0) {
-           final int threshold = (_maxDoseCount * 0.2).floor(); // Calculate 20% threshold
+        // Use the NotificationService here
+        if ((_doseCount != oldDoseCount || _maxDoseCount != oldMaxDoseCount) && _maxDoseCount > 0) {
+           final int threshold = (_maxDoseCount * 0.2).floor();
 
-           print("Checking notification: Dose=$_doseCount, Max=$_maxDoseCount, Threshold=$threshold, Shown=$_lowDoseNotificationShown"); // Debug print
+           print("Checking notification: Dose=$_doseCount, Max=$_maxDoseCount, Threshold=$threshold, Shown=$_lowDoseNotificationShown");
 
-           // Condition to show notification: dose is below/at threshold AND notification hasn't been shown yet
            if (_doseCount <= threshold && !_lowDoseNotificationShown) {
-             _showLowDoseNotification(_doseCount, _maxDoseCount);
-             _lowDoseNotificationShown = true; // Set flag
-             // Don't necessarily need stateChanged = true here unless the flag affects UI directly
+             // Call the service method instead of the local one
+             _notificationService.showLowDoseNotification(_doseCount, _maxDoseCount);
+             _lowDoseNotificationShown = true;
            }
-           // Condition to reset flag: dose goes back strictly above threshold
            else if (_doseCount > threshold && _lowDoseNotificationShown) {
              print("Resetting notification flag as dose count is above threshold.");
-             _lowDoseNotificationShown = false; // Reset flag
-             // Optionally cancel notification if user refills:
-             // _flutterLocalNotificationsPlugin.cancel(0);
+             _lowDoseNotificationShown = false;
+             // Optionally cancel the persistent notification if user refills
+             _notificationService.cancelNotification(0); // Assuming ID 0 for low dose
            }
         }
         // --- End Notification Check ---
 
-
-        // --- Apply state changes if necessary ---
         if (stateChanged && mounted) {
            print("setState called due to Firebase data change.");
            setState(() {});
         }
-
-        // Final connection status update (handled within listener 'onValue' now)
-        // if (!_isConnected && mounted) {
-        //    setState(() { _isConnected = true; });
-        // }
 
      } catch (e, stacktrace) {
          print('Error parsing data: $e');
@@ -457,57 +353,49 @@ void _parseData(dynamic rawData) {
 
   // Helper method to parse int values safely
   int _parseIntValue(dynamic value, int defaultValue) {
+     // ... (remains the same)
     if (value == null) return defaultValue;
     if (value is int) return value;
     if (value is double) return value.toInt();
     if (value is String) return int.tryParse(value) ?? defaultValue;
-    // Handle other types if necessary, or return default
     return defaultValue;
   }
 
    // Helper method to parse double values safely
   double _parseDoubleValue(dynamic value, double defaultValue) {
+    // ... (remains the same)
     if (value == null) return defaultValue;
     if (value is double) return value;
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? defaultValue;
-    // Handle other types if necessary, or return default
     return defaultValue;
   }
 
-
   // Function to update buzzer control value in Firebase
   Future<void> _updateBuzzerControl() async {
+    // ... (remains the same)
      if (!_isConnected) {
        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot control buzzer: Offline')));
        return;
      }
-     // _dbRef should not be null if _isConnected is true based on initialization logic
-     // if (_dbRef == null) return;
 
-     final nextBuzzerState = _buzzerControl == 0 ? 29 : 0; // Assuming 29 turns it ON
+     final nextBuzzerState = _buzzerControl == 0 ? 29 : 0;
      try {
         print("Attempting to set buzzerControl to $nextBuzzerState");
         await _dbRef.update({'buzzerControl': nextBuzzerState});
-        // Update local state immediately for responsiveness, though listener will confirm
         if (mounted) {
             setState(() { _buzzerControl = nextBuzzerState; });
             print("Local buzzer state updated to $nextBuzzerState");
         }
 
-        // Cancel any existing reset timer
         _buzzerResetTimer?.cancel();
 
-        // If the buzzer was turned ON (state 29), start a timer to turn it OFF
         if (nextBuzzerState == 29) {
            _buzzerResetTimer = Timer(const Duration(seconds: 5), () async {
-             // Check if the state is still ON and we are connected before turning OFF
              if (_buzzerControl == 29 && _isConnected && mounted) {
                  try {
                     print("Auto-resetting buzzerControl to 0");
                     await _dbRef.update({'buzzerControl': 0});
-                    // Update local state via listener is preferred, but can force here if needed
-                    // if(mounted) setState(() => _buzzerControl = 0);
                  } catch (e) {
                      print('Error auto-resetting buzzer: $e');
                      if(mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error stopping buzzer'))); }
@@ -525,7 +413,7 @@ void _parseData(dynamic rawData) {
 
   // Function to edit dose count
  void _editDoseCount() {
-     // _dbRef should not be null here if the button is active
+    // ... (dialog logic remains the same, but ensure correct path for update)
      if (!_isConnected && !_isInitializing) {
          if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot edit dose count: Offline')));
          return;
@@ -544,7 +432,7 @@ void _parseData(dynamic rawData) {
              decoration: InputDecoration(
                labelText: 'Enter remaining doses',
                hintText: 'Current: $_doseCount',
-               suffixText: '/ $_maxDoseCount', // Show max dose limit
+               suffixText: '/ $_maxDoseCount',
                border: const OutlineInputBorder(),
              ),
            ),
@@ -555,30 +443,24 @@ void _parseData(dynamic rawData) {
                  final newDoseCountStr = newDoseCountController.text;
                  final newDoseCountInt = int.tryParse(newDoseCountStr);
 
-                 if (newDoseCountInt == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid number entered')));
-                    return;
-                 }
-                 if (newDoseCountInt < 0 || newDoseCountInt > _maxDoseCount) {
+                 if (newDoseCountInt == null || newDoseCountInt < 0 || newDoseCountInt > _maxDoseCount) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Dose count must be between 0 and $_maxDoseCount')));
                     return;
                  }
-                 // If no change, just close the dialog
                  if (newDoseCountInt == _doseCount) {
                     Navigator.of(context).pop();
                     return;
                  }
 
                  print("Attempting manual dose count update to $newDoseCountInt");
-                 // Update Firebase. The listener will handle the state update and notification check.
-                  // Again, ensure the path is correct ('doseCount' or 'Counts/doseCount')
-                 _dbRef.update({'doseCount': newDoseCountInt}).then((_) {
+                 // --- Ensure this path matches where _parseData reads from ---
+                 _dbRef.update({'Counts/doseCount': newDoseCountInt}).then((_) {
+                 // --- OR use {'doseCount': newDoseCountInt} if that's the correct path ---
                     print("Manual dose count update successful.");
-                    Navigator.of(context).pop(); // Close dialog on success
+                    Navigator.of(context).pop();
                  }).catchError((error) {
                      print("Error manually updating dose count: $error");
                      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving dose count: $error'))); }
-                     // Optionally leave the dialog open on error
                  });
                },
                child: const Text('Save'),
@@ -588,47 +470,6 @@ void _parseData(dynamic rawData) {
        },
      );
    }
-
-
- // --- NEW: Helper method to build a single stat card for the grid ---
-   Widget _buildStatCard(String title, String value) {
-    return Card(
-      color: const Color(0xFF0D47A1), // Dark blue color from image
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), // Rounded corners
-      elevation: 3,
-      child: Padding(
-        // Slightly reduce vertical padding if needed, but try aspect ratio first
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // Center content vertically
-          crossAxisAlignment: CrossAxisAlignment.center, // Center content horizontally
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600), // Slightly smaller title?
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6), // Slightly reduce space
-            // Wrap the large value text with FittedBox
-            Expanded( // Allow FittedBox to take available vertical space
-              child: FittedBox(
-                fit: BoxFit.scaleDown, // Scale down if needed, don't scale up
-                child: Text(
-                  value,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold), // Keep original size, FittedBox will shrink if needed
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
  // --- End NEW Helper Method ---
 
 
@@ -696,23 +537,13 @@ void _parseData(dynamic rawData) {
               ),
               const SizedBox(height: 24), // Spacing after DoseCounter
 
-              // --- NEW Stats Grid ---
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true, // Important inside SingleChildScrollView
-                physics: const NeverScrollableScrollPhysics(), // Disable grid's own scrolling
-                crossAxisSpacing: 12, // Horizontal space between cards
-                mainAxisSpacing: 12,  // Vertical space between cards
-                childAspectRatio: 1.6, // Width / Height ratio - adjust as needed for appearance
-                children: [
-                  _buildStatCard('Daily Doses', '$_dailyDosesTaken/$_dailyDoseLimit'),
-                  _buildStatCard('Correct Count', '$_correctCount'),
-                  // Displaying the overall maximum capacity here
-                  _buildStatCard('Maximum dose', '$_maxDoseCount'),
-                  _buildStatCard('False Count', '$_falseCount'),
-                ],
+             StatsGrid(
+                dailyDosesTaken: _dailyDosesTaken,
+                dailyDoseLimit: _dailyDoseLimit,
+                correctCount: _correctCount,
+                falseCount: _falseCount,
+                maxDoseCount: _maxDoseCount, // Pass the max dose count
               ),
-              // --- End NEW Stats Grid ---
 
               const SizedBox(height: 24), // Spacing before BuzzerControl
 

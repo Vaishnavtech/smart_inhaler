@@ -1811,3 +1811,9 @@ class _InhalerDashboardScreen1State extends State<InhalerDashboardScreen1> {
     );
   }
 }
+
+//widget  MotionSensorNumericalData(
+                accelX: _accelX, accelY: _accelY, accelZ: _accelZ,
+                gyroX: _gyroX, gyroY: _gyroY, gyroZ: _gyroZ,
+                temp: _temp,
+              ),

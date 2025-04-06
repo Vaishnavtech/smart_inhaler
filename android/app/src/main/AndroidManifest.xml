@@ -1,8 +1,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ****** ADD THIS PERMISSION for VIBRATION ****** -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- ****** ADD THIS PERMISSION for POSTING NOTIFICATIONS (Required for Android 13+ Target SDK 33+) ****** -->
+    <!-- If you target Android 13 (API 33) or higher, you MUST declare this permission -->
+    <!-- and request it at runtime from the user. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Optional: Add if your notifications need to be rescheduled after device reboot -->
+    <!-- <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/> -->
+
+    <!-- Optional: Add if you need precise scheduling for notifications (may require runtime permission too on newer Android) -->
+    <!-- <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/> -->
+
+
     <application
         android:label="smart_inhaler"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -25,6 +42,25 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- ****** ADD THIS RECEIVER if using flutter_local_notifications and need reboot persistence ****** -->
+        <!-- Check your specific notification plugin documentation if this is needed -->
+        <!-- <receiver android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver> -->
+
+        <!-- ****** ADD THIS RECEIVER if using flutter_local_notifications for scheduled notifications ****** -->
+        <!-- Check your specific notification plugin documentation if this is needed -->
+       <!-- <receiver android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+           android:exported="false" /> -->
+
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
